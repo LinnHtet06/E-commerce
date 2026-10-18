@@ -1,0 +1,71 @@
+/* Ensure body and main container do not cause overflow */
+/* body,
+.container {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+
+.container {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.row {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+}
+
+.row .col {
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+} */
+
+.dis {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+.img {
+  position: relative;
+  width: 100%;
+  margin: auto;
+  overflow: hidden;
+}
+
+.img img {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: cover;
+}
+.cardbody {
+  text-align: center;
+}
+a {
+  text-decoration: none;
+}
+.add-to-bag-btn {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: black;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 50px;
+  font-size: 16px;
+  width: 100%;
+  max-width: 300px; /* Adjust max-width as needed */
+  box-sizing: border-box;
+}
+.btn .remove {
+  text-decoration: underline;
+}
+.add-to-bag-btn span {
+  display: inline-block;
+}
