@@ -13,7 +13,7 @@
                 </div>
                 <div class="profile-name">
                 <?php if(isset($_SESSION['authenticate'])){?>
-                  <h5 class="mb-0 font-weight-normal"><?= $_SESSION['auth_admin']['a_name'];?></h5>
+                  <h5 class="mb-0 font-weight-normal"><?= e($_SESSION['auth_admin']['a_name']) ?></h5>
                   <?php }
                     ?>
                   <span>Admin</span>
@@ -43,20 +43,20 @@
             </a>
           </li>
           <li class="nav-item menu-items">
-            <a class="nav-link"  href="addCollection.php">
+            <a class="nav-link"  href="collections.php">
               <span class="menu-icon">
                 <i class="mdi mdi-laptop"></i>
               </span>
-              <span class="menu-title">Collection</span>
+              <span class="menu-title">Collections</span>
              
             </a>
           </li>
           <li class="nav-item menu-items">
-            <a class="nav-link"  href="addCategory.php">
+            <a class="nav-link"  href="products.php">
               <span class="menu-icon">
                 <i class="mdi mdi-laptop"></i>
               </span>
-              <span class="menu-title">Product</span>
+              <span class="menu-title">Products</span>
              
             </a>
           </li>

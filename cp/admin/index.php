@@ -1,180 +1,86 @@
-<?php 
-session_start();
-include('template/header.php');
-
+<?php
+$pageTitle = 'Dashboard | DIOR Admin';
+include __DIR__ . '/template/header.php';
+$stats = getDashboardStats();
+$cards = [
+    ['Revenue (excl. cancelled)', '$' . money($stats['revenue']), 'mdi-currency-usd', 'success'],
+    ['Orders awaiting action', $stats['pending'], 'mdi-cart-outline', $stats['pending'] ? 'danger' : 'success'],
+    ['Products', $stats['products'], 'mdi-flask-outline', 'success'],
+    ['Customers', $stats['customers'], 'mdi-account-multiple', 'success'],
+];
 ?>
-        <div class="main-panel">
-  
-        <div class="content-wrapper">
-  
-
-            <div class="row">
-              <div class="col-xl-3 col-sm-6 grid-margin stretch-card">
-                <div class="card">
-                  <div class="card-body">
-                    <div class="row">
-                      <div class="col-9">
-                        <div class="d-flex align-items-center align-self-start">
-                          <h3 class="mb-0">$12.34</h3>
-                          <p class="text-success ml-2 mb-0 font-weight-medium">+3.5%</p>
-                        </div>
-                      </div>
-                      <div class="col-3">
-                        <div class="icon icon-box-success ">
-                          <span class="mdi mdi-arrow-top-right icon-item"></span>
-                        </div>
-                      </div>
-                    </div>
-                    <h6 class="text-muted font-weight-normal">Potential growth</h6>
+<div class="main-panel">
+  <div class="content-wrapper">
+    <div class="row">
+      <?php foreach ($cards as [$label, $value, $icon, $tone]): ?>
+        <div class="col-xl-3 col-sm-6 grid-margin stretch-card">
+          <div class="card">
+            <div class="card-body">
+              <div class="row">
+                <div class="col-9">
+                  <h3 class="mb-0"><?= e($value) ?></h3>
+                </div>
+                <div class="col-3">
+                  <div class="icon icon-box-<?= e($tone) ?>">
+                    <span class="mdi <?= e($icon) ?> icon-item"></span>
                   </div>
                 </div>
               </div>
-              <div class="col-xl-3 col-sm-6 grid-margin stretch-card">
-                <div class="card">
-                  <div class="card-body">
-                    <div class="row">
-                      <div class="col-9">
-                        <div class="d-flex align-items-center align-self-start">
-                          <h3 class="mb-0">$17.34</h3>
-                          <p class="text-success ml-2 mb-0 font-weight-medium">+11%</p>
-                        </div>
-                      </div>
-                      <div class="col-3">
-                        <div class="icon icon-box-success">
-                          <span class="mdi mdi-arrow-top-right icon-item"></span>
-                        </div>
-                      </div>
-                    </div>
-                    <h6 class="text-muted font-weight-normal">Revenue current</h6>
-                  </div>
-                </div>
-              </div>
-              <div class="col-xl-3 col-sm-6 grid-margin stretch-card">
-                <div class="card">
-                  <div class="card-body">
-                    <div class="row">
-                      <div class="col-9">
-                        <div class="d-flex align-items-center align-self-start">
-                          <h3 class="mb-0">$12.34</h3>
-                          <p class="text-danger ml-2 mb-0 font-weight-medium">-2.4%</p>
-                        </div>
-                      </div>
-                      <div class="col-3">
-                        <div class="icon icon-box-danger">
-                          <span class="mdi mdi-arrow-bottom-left icon-item"></span>
-                        </div>
-                      </div>
-                    </div>
-                    <h6 class="text-muted font-weight-normal">Daily Income</h6>
-                  </div>
-                </div>
-              </div>
-              <div class="col-xl-3 col-sm-6 grid-margin stretch-card">
-                <div class="card">
-                  <div class="card-body">
-                    <div class="row">
-                      <div class="col-9">
-                        <div class="d-flex align-items-center align-self-start">
-                          <h3 class="mb-0">$31.53</h3>
-                          <p class="text-success ml-2 mb-0 font-weight-medium">+3.5%</p>
-                        </div>
-                      </div>
-                      <div class="col-3">
-                        <div class="icon icon-box-success ">
-                          <span class="mdi mdi-arrow-top-right icon-item"></span>
-                        </div>
-                      </div>
-                    </div>
-                    <h6 class="text-muted font-weight-normal">Expense current</h6>
-                  </div>
-                </div>
-              </div>
+              <h6 class="text-muted font-weight-normal"><?= e($label) ?></h6>
             </div>
-
-            <div class="row">
-              <div class="col-sm-4 grid-margin">
-                <div class="card">
-                  <div class="card-body">
-                    <h5>Revenue</h5>
-                    <div class="row">
-                      <div class="col-8 col-sm-12 col-xl-8 my-auto">
-                        <div class="d-flex d-sm-block d-md-flex align-items-center">
-                          <h2 class="mb-0">$32123</h2>
-                          <p class="text-success ml-2 mb-0 font-weight-medium">+3.5%</p>
-                        </div>
-                        <h6 class="text-muted font-weight-normal">11.38% Since last month</h6>
-                      </div>
-                      <div class="col-4 col-sm-12 col-xl-4 text-center text-xl-right">
-                        <i class="icon-lg mdi mdi-codepen text-primary ml-auto"></i>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="col-sm-4 grid-margin">
-                <div class="card">
-                  <div class="card-body">
-                    <h5>Sales</h5>
-                    <div class="row">
-                      <div class="col-8 col-sm-12 col-xl-8 my-auto">
-                        <div class="d-flex d-sm-block d-md-flex align-items-center">
-                          <h2 class="mb-0">$45850</h2>
-                          <p class="text-success ml-2 mb-0 font-weight-medium">+8.3%</p>
-                        </div>
-                        <h6 class="text-muted font-weight-normal"> 9.61% Since last month</h6>
-                      </div>
-                      <div class="col-4 col-sm-12 col-xl-4 text-center text-xl-right">
-                        <i class="icon-lg mdi mdi-wallet-travel text-danger ml-auto"></i>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="col-sm-4 grid-margin">
-                <div class="card">
-                  <div class="card-body">
-                    <h5>Purchase</h5>
-                    <div class="row">
-                      <div class="col-8 col-sm-12 col-xl-8 my-auto">
-                        <div class="d-flex d-sm-block d-md-flex align-items-center">
-                          <h2 class="mb-0">$2039</h2>
-                          <p class="text-danger ml-2 mb-0 font-weight-medium">-2.1% </p>
-                        </div>
-                        <h6 class="text-muted font-weight-normal">2.27% Since last month</h6>
-                      </div>
-                      <div class="col-4 col-sm-12 col-xl-4 text-center text-xl-right">
-                        <i class="icon-lg mdi mdi-monitor text-success ml-auto"></i>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-           
-
-                
-
-
           </div>
-</div>
+        </div>
+      <?php endforeach; ?>
+    </div>
+
+    <div class="row">
+      <div class="col-md-7 grid-margin stretch-card">
+        <div class="card">
+          <div class="card-body">
+            <h4 class="card-title">Recent orders</h4>
+            <div class="table-responsive">
+              <table class="table">
+                <thead><tr><th>Tracking</th><th>Customer</th><th>Total</th><th>Status</th><th></th></tr></thead>
+                <tbody>
+                  <?php foreach ($stats['recent'] as $order): ?>
+                    <tr>
+                      <td><?= e($order['tracking_no']) ?></td>
+                      <td><?= e($order['name']) ?></td>
+                      <td>$<?= money($order['o_totalAmount']) ?></td>
+                      <td><?= e(statusLabel($order['status'])) ?></td>
+                      <td><a class="btn btn-sm btn-outline-light" href="viewOrder.php?t=<?= e(urlencode($order['tracking_no'])) ?>">View</a></td>
+                    </tr>
+                  <?php endforeach; ?>
+                  <?php if (!$stats['recent']): ?>
+                    <tr><td colspan="5">No orders yet</td></tr>
+                  <?php endif; ?>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       </div>
+      <div class="col-md-5 grid-margin stretch-card">
+        <div class="card">
+          <div class="card-body">
+            <h4 class="card-title">Low stock (5 or fewer)</h4>
+            <ul class="list-unstyled mb-0">
+              <?php foreach ($stats['lowStock'] as $product): ?>
+                <li class="d-flex justify-content-between border-bottom py-2">
+                  <a href="editProduct.php?id=<?= (int) $product['p_id'] ?>"><?= e($product['p_name']) ?></a>
+                  <span class="<?= $product['p_stock'] <= 0 ? 'text-danger' : 'text-warning' ?>">
+                    <?= $product['p_stock'] <= 0 ? 'Out of stock' : (int) $product['p_stock'] . ' left' ?>
+                  </span>
+                </li>
+              <?php endforeach; ?>
+              <?php if (!$stats['lowStock']): ?>
+                <li>All products are well stocked.</li>
+              <?php endif; ?>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
-  <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script> 
-  <script src="https://cdn.datatables.net/2.0.8/js/dataTables.js"></script> 
-  <script src=" https://cdn.datatables.net/2.0.8/js/dataTables.bootstrap5.js"></script> 
-    -->
- 
-
-    <script> 
-
-/* Initialization of datatable */ 
-$(document).ready(function() { 
-  $('#tableID').DataTable({ }); 
-}); 
-</script>
-
-   
-</body>
-</html>
-<?php include('template/footer.php');?>
+<?php include __DIR__ . '/template/footer.php'; ?>
