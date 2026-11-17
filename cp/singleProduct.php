@@ -1,183 +1,77 @@
 <?php
-session_start();
- include('include/header.php');
- include('functions/userfunction.php');
- if(isset($_GET['product']))
-{
-    $productName=$_GET['product'];
-    $productData=getproductName("product",$productName);
-    $product=mysqli_fetch_array($productData);
-    if($product)
-    {
-    ;
-        
-        ?>
-<div class="py-3">
-    <div class="container">
-        <h6 class="text-black">
-            <a class="text-black" href="index.php">
-            Home/
-            </a>
-            
-            <a class="text-black" href="product.php?<?=$product['colName'];?>">
-            
-            </a>
-            <?=$product['p_name'];?>
-        </h6>
-    </div>
-</div>
+require_once __DIR__ . '/functions/userfunction.php';
 
-<div class="container mt-3 product_data" id="<?=$product['p_id']?>">
-        <div class="row">
-            <div class="col-md-4">
-                <img src="upload/<?=$product['p_image']?>" alt="<?=$product['p_name']?>" class="w-100">
-            </div>
-            <div class="col-md-8">
-                <div class="row mt-3">
-                    <div class="col-md-6">
-                        <h4><?=$product['p_name']?></h4>
-                        <hr> 
-                    </div>
-                    <div class="col-md-6">
-                    <button class="btn wish" value="<?=$product['p_id']?>"><i class="fa bi bi-heart"></i></button>   
-                    </div>
-                </div>
-                <p><?=$product['p_note']?></p>
-                
-                <input type="radio" class="btn-check" name="options" id="option1" autocomplete="off" checked>
-                <label class="btn btn-secondary" for="option1"><?=$product['p_size']?></label>
-                <!-- <input type="radio" class="btn-check" name="options" id="option2" autocomplete="off">
-                <label class="btn btn-secondary" for="option2"><?=$product['p_size']?></label> -->
-                <h6>Description:</h6>
-                <p><?=$product['p_description']?></p>
-                <h6>Ingredients</h6>
-                <p><?=$product['p_ingredients']?></p>
-                <div class="col-md-12">
-                    <!-- <button class="btn btn-dark">Buy$</button> -->
-                </div>
-                
-                <!-- start of offcanvas -->
-                <div class="input-group mb-3" style="width:140px">
-                    <button class="input-group-text decrement-btn ">-</button>
-                    <input type="text" class="form-control text-center bg-white qty" value="1">
-                    <button class="input-group-text increment-btn ">+</button>
-                </div>
-                
-
-                <button class="btn btn-dark add-to-bag-btn" value="<?=$product['p_id']?>" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasRight" aria-controls="offcanvasRight">
-                <span>ADD</span>
-                <span class="priceBtn">Buy$ <?=$product['p_price']?></span>
-                </button>
-                 
-                <div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasRight" aria-labelledby="offcanvasRightLabel">
-                <div class="offcanvas-header">
-                    <h5 class="offcanvas-title" id="offcanvasRightLabel"></h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-                </div>
-                <div class="offcanvas-body" id="myCart">
-                    <h5 class="text-center">Cart</h5>
-                    <?php
-
-                $items=getCartItem();
-                $cartTotal=0;
-                $totalPrice=0;
-                if(mysqli_num_rows($items)>0){
-                foreach($items as $cartItem){
-                    $totalPrice += $cartItem['p_price'] * $cartItem['pqty'];
-                                    if ($totalPrice > 0) {
-                                        $cartTotal += $totalPrice;
-                                    }
-                    ?>
-                <div class="row cartItem" id="<?=$cartItem['p_id']?>">
-            <div class="col-md-4">
-                <img src="upload/<?=$cartItem['p_image']?>" alt="<?=$cartItem['p_name']?>" class="w-100">
-            </div>
-            <div class="col-md-8">
-                <div class="row mt-2">
-                    <div class="col-md-3x">
-                        <h6><?=$cartItem['p_name']?></h6> 
-                    </div>
-                </div>
-                <div class="row mt-2">
-                    <div class="col-md-3x">
-                    <h6>Size:<?=$cartItem['p_size']?></h6>
-                    <h6>Price: $<?=$cartItem['p_price']?></h6> 
-                    <div class="input-group mb-3" style="width:140px">
-                    <button class="input-group-text decrement-btn updateQuantity">-</button>
-                    <input type="text" class="form-control text-center bg-white qty cartQty" value="<?=$cartItem['pqty']?>">
-                    <button class="input-group-text increment-btn updateQuantity">+</button>
-                </div>
-                    <!-- <h6>Quantity:<?=$cartItem['pqty']?></h6>  -->
-                 
-                   <?php
-                    if($cartItem['pqty'] > 1)
-                    {
-                        ?>
-                        <h6>Total Price:$<?=$totalPrice?>.00</h6> 
-                        
-                        <?php
-                        $totalPrice=0;
-                    }
-                    else{
-                        $totalPrice=0;
-                    }
-                   ?>
-                    </div>
-                </div>
-                <div class="row">
-                    <button class="btn btn-danger removeItem" value="<?=$cartItem['cID']?>">Remove</button>
-                </div>
-               
-                
-                </div><hr class="mt-2">
-                </div>
-                <?php  
-                } 
-                }
-            
-                else{?>
-                    <div class="card card-body shadow text-center">
-                        <h4 class="py-3">Your cart is empty </h4>
-                    </div>
-                    <?php
-                }
-                ?>
-<!-- End of Offcanvas -->
- <!-- Responsive Canvas -->
-<!-- <button class="btn btn-dark d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasResponsive" aria-controls="offcanvasResponsive">
-<span></span>
-</button> -->
-
-<div class="offcanvas-lg offcanvas-end" tabindex="-1" id="offcanvasResponsive" aria-labelledby="offcanvasResponsiveLabel">
-  <div class="offcanvas-header">
-    <h5 class="offcanvas-title" id="offcanvasResponsiveLabel"></h5>
-    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#offcanvasResponsive" aria-label="Close"></button>
-  </div>
-  <div class="offcanvas-body">
-    <p class="mb-0"></p>
-  </div>
-</div>
- <!-- END of responsive -->
- 
-</div>
-<a href="checkOut.php" value="<?=$product['p_id']?>" class="btn btn-outline-primary checkOut">Proceed to Check Out $<?=$cartTotal?></a>
-        </div>
-        
-        <!-- Related Products -->
-        
-    </div>
-
-    <?php   
-    }
-    else{
-        echo "Products Not Availabe";
-    }
-} 
-else{
-    echo "Something Went Wrong";
+// Products are linked by id; ?product=<name> still works for old links.
+$product = null;
+if ($id = positive_int($_GET['id'] ?? null)) {
+    $product = getProductById($id);
+} elseif (isset($_GET['product'])) {
+    $product = getProductByName((string) $_GET['product']);
 }
-
-
-include('include/footer.php');
+$pageTitle = $product ? $product['p_name'] . ' | Dior' : 'Product not found | Dior';
+include __DIR__ . '/include/header.php';
 ?>
+<?php if (!$product): ?>
+  <div class="container py-5 text-center">
+    <h4>Product not available</h4>
+    <a href="index.php" class="btn btn-dark mt-3">Back to home</a>
+  </div>
+<?php else: ?>
+  <?php $inStock = $product['p_stock'] > 0; ?>
+  <div class="py-3">
+    <div class="container">
+      <h6 class="text-black">
+        <a class="text-black" href="index.php">Home</a> /
+        <a class="text-black" href="product.php?collection=<?= e(urlencode($product['colName'])) ?>"><?= e($product['colName']) ?></a> /
+        <?= e($product['p_name']) ?>
+      </h6>
+    </div>
+  </div>
 
+  <div class="container mt-3 mb-5 product_data">
+    <div class="row">
+      <div class="col-md-4">
+        <img src="upload/<?= e($product['p_image']) ?>" alt="<?= e($product['p_name']) ?>" class="w-100">
+      </div>
+      <div class="col-md-8">
+        <div class="row mt-3">
+          <div class="col-10">
+            <h4><?= e($product['p_name']) ?></h4>
+          </div>
+          <div class="col-2 text-end">
+            <button class="btn wish" type="button" value="<?= (int) $product['p_id'] ?>" title="Add to wishlist"><i class="bi bi-heart"></i></button>
+          </div>
+        </div>
+        <hr>
+        <p><?= e($product['p_note']) ?></p>
+
+        <?php if ($product['p_size']): ?>
+          <input type="radio" class="btn-check" name="options" id="option1" autocomplete="off" checked>
+          <label class="btn btn-secondary mb-3" for="option1"><?= e($product['p_size']) ?></label>
+        <?php endif; ?>
+
+        <h6>Description:</h6>
+        <p><?= nl2br(e($product['p_description'])) ?></p>
+        <h6>Ingredients</h6>
+        <p><?= e($product['p_ingredients']) ?></p>
+
+        <?php if ($inStock): ?>
+          <p class="text-success">In stock<?= $product['p_stock'] <= 5 ? ' (only ' . (int) $product['p_stock'] . ' left)' : '' ?></p>
+          <div class="input-group mb-3" style="width:140px">
+            <button class="input-group-text decrement-btn" type="button" aria-label="Decrease quantity">-</button>
+            <input type="text" class="form-control text-center bg-white qty" value="1" data-max="<?= (int) $product['p_stock'] ?>" readonly>
+            <button class="input-group-text increment-btn" type="button" aria-label="Increase quantity">+</button>
+          </div>
+          <button class="btn btn-dark add-to-bag-btn" type="button" value="<?= (int) $product['p_id'] ?>">
+            <span>ADD</span>
+            <span class="priceBtn">Buy $<?= money($product['p_price']) ?></span>
+          </button>
+        <?php else: ?>
+          <p class="text-danger fw-bold">Out of stock</p>
+          <button class="btn btn-secondary" type="button" disabled>$<?= money($product['p_price']) ?> · Out of stock</button>
+        <?php endif; ?>
+      </div>
+    </div>
+  </div>
+<?php endif; ?>
+<?php include __DIR__ . '/include/footer.php'; ?>

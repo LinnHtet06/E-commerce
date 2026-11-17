@@ -1,435 +1,192 @@
-const plus = document.querySelectorAll(".increment-btn");
-const minus = document.querySelectorAll(".decrement-btn");
-const qty = document.querySelector(".qty");
-const buy = document.querySelector(".add-to-bag-btn");
-const wishList = document.querySelector(".wish");
-const removeItems = document.querySelectorAll(".removeItem");
-const removeWishList = document.querySelectorAll(".removeWishList");
-const cart = document.querySelector("#myCart");
-const wish = document.querySelector("#wish");
-const placeOrderBtn = document.querySelector(".placeOrder-btn");
-const priceBtn = document.querySelector(".priceBtn");
+// Shop interactions: quantity buttons, cart and wishlist.
+// Every element is looked up safely, so this file runs without errors on any page.
 
-// const productData = buy.closest(".product_data");
-// const prod_id = buy.value;
+document.addEventListener("DOMContentLoaded", () => {
+  const notify = (type, message) => {
+    if (window.alertify) {
+      alertify.set("notifier", "position", "top-right");
+      alertify[type](message);
+    } else {
+      alert(message);
+    }
+  };
 
-plus.forEach((button) => {
-  button.addEventListener("click", (e) => {
-    e.preventDefault();
-    const qtyInput = e.target.closest(".input-group").querySelector(".qty");
-    let value = parseInt(qtyInput.value, 10);
-    if (isNaN(value)) {
-      value = 0;
-    }
+  // POST JSON to a PHP endpoint and return its JSON answer.
+  async function postJSON(url, body) {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    return response.json();
+  }
 
-    if (value < 100) {
-      value++;
-      qtyInput.value = value;
-    }
-  });
-});
-minus.forEach((button) => {
-  button.addEventListener("click", (e) => {
-    e.preventDefault();
-    const qtyInput = e.target.closest(".input-group").querySelector(".qty");
-    let value = parseInt(qtyInput.value, 10);
-    if (isNaN(value)) {
-      value = 0;
-    }
-    if (value > 1) {
-      value--;
-      qtyInput.value = value;
-    }
-  });
-});
+  const isSuccess = (status) => status === 200 || status === 201;
 
-document.addEventListener("DOMContentLoaded", function () {
-  document.querySelectorAll(".removeWishList").forEach((button) => {
+  // Recalculate line totals and the cart total in the slide-out cart.
+  function recalcCart() {
+    const items = document.querySelectorAll(".cartItem");
+    let total = 0;
+    items.forEach((item) => {
+      const price = parseFloat(item.dataset.price);
+      const qty = parseInt(item.querySelector(".qty").value, 10) || 0;
+      const line = price * qty;
+      total += line;
+      const lineEl = item.querySelector(".lineTotal");
+      if (lineEl) lineEl.textContent = line.toFixed(2);
+    });
+    const totalEl = document.querySelector("#cartTotal");
+    if (totalEl) totalEl.textContent = total.toFixed(2);
+    document.querySelector("#cartEmpty")?.classList.toggle("d-none", items.length > 0);
+    document.querySelector("#cartCheckout")?.classList.toggle("d-none", items.length === 0);
+  }
+
+  // + / - buttons (product page and cart).
+  document.querySelectorAll(".increment-btn, .decrement-btn").forEach((button) => {
     button.addEventListener("click", async (e) => {
       e.preventDefault();
-
-      const wID = e.target.value;
-
-      const wishlistItem = e.target.closest(".wishlist-item");
-      if (wishlistItem) {
-        wishlistItem.style.opacity = 0.5; // Indicate removal in progress
+      const input = button.closest(".input-group").querySelector(".qty");
+      const current = parseInt(input.value, 10) || 1;
+      const max = parseInt(input.dataset.max || "100", 10);
+      const next = button.classList.contains("increment-btn")
+        ? Math.min(current + 1, max)
+        : Math.max(current - 1, 1);
+      if (next === current) {
+        if (button.classList.contains("increment-btn")) notify("warning", `Only ${max} in stock`);
+        return;
       }
+      input.value = next;
 
+      // Inside the cart, save the new quantity straight away.
+      const cartItem = button.closest(".cartItem");
+      if (!cartItem) return;
       try {
-        const response = await fetch("functions/wishList.php", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            wID: wID,
-            scope: "delete",
-          }),
+        const result = await postJSON("functions/handleCart.php", {
+          scope: "update",
+          cartId: cartItem.dataset.cartId,
+          prod_qty: next,
         });
-
-        const result = await response.json();
-        console.log(result);
-
-        if (result.status == 201) {
-          alertify.success("Product deleted from wishlist");
-          if (wishlistItem) {
-            wishlistItem.remove();
-          }
-        } else if (result.status == 404) {
-          alertify.error("Wish item not found");
-          if (wishlistItem) {
-            wishlistItem.style.opacity = 1; // Revert if error
-          }
-        } else if (result.status == 500) {
-          alertify.error("Something went wrong");
-          if (wishlistItem) {
-            wishlistItem.style.opacity = 1; // Revert if error
-          }
+        if (isSuccess(result.status)) {
+          recalcCart();
         } else {
-          alertify.error("Unexpected error");
-          if (wishlistItem) {
-            wishlistItem.style.opacity = 1; // Revert if error
-          }
+          input.value = current;
+          notify("error", result.message || "Could not update quantity");
         }
       } catch (error) {
-        console.error("Error:", error);
-        alertify.error("Failed to remove product from wishlist");
-        if (wishlistItem) {
-          wishlistItem.style.opacity = 1; // Revert if error
-        }
+        console.error(error);
+        input.value = current;
+        notify("error", "Could not update quantity");
       }
     });
   });
-});
 
-// removeWishList.forEach((button) => {
-//   button.addEventListener("click", async (e) => {
-//     e.preventDefault();
-//     const wID = e.target.value;
-
-//     try {
-//       const response = await fetch("functions/wishList.php", {
-//         method: "POST",
-//         headers: {
-//           "Content-Type": "application/json",
-//         },
-//         body: JSON.stringify({
-//           wID: wID,
-//           scope: "delete",
-//         }),
-//       });
-
-//       const responseText = await response.text(); // Get the response text
-//       console.log(responseText); // Log the response text
-
-//       // Try to parse the response as JSON
-//       const result = JSON.parse(responseText);
-//       console.log(result);
-
-//       if (result.status == 201) {
-//         alertify.success("Product deleted from wishList");
-//         $("#wish").load(location.href + "#wish");
-//       } else if (result.status == 500) {
-//         alertify.error("Something went wrong");
-//       } else {
-//         alertify.error("Unexpected error");
-//       }
-//     } catch (error) {
-//       console.error("Error:", error);
-//       alertify.error("Failed to add product to wishList");
-//     }
-//   });
-// });
-
-document.addEventListener("DOMContentLoaded", function () {
-  async function updateCart() {
-    try {
-      // Fetch updated cart data
-      const response = await fetch("functions/handleCart.php"); // Adjust the URL to your getCart.php
-      const cartHtml = await response.text(); // Get the updated cart HTML
-
-      // Update off-canvas with new cart data
-      document.querySelector("#myCart").innerHTML = cartHtml;
-    } catch (error) {
-      console.error("Failed to fetch cart:", error);
-    }
-  }
+  // Add to cart (product page).
   document.querySelectorAll(".add-to-bag-btn").forEach((button) => {
     button.addEventListener("click", async (e) => {
       e.preventDefault();
-
-      const productData = e.target.closest(".product_data");
-      const prod_id = productData.querySelector(".add-to-bag-btn").value;
-      const qty = productData.querySelector(".qty").value;
-
-      // const cart = e.target.closest(".col-md-8").next(".offcanvas-body");
-      // if (cart) {
-      //   cart.style.opacity = 0.5; // Indicate removal in progress
-      // }
-
+      const qty = button.closest(".product_data").querySelector(".qty").value;
       try {
-        const response = await fetch("functions/handleCart.php", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            prod_id: prod_id,
-            prod_qty: qty,
-            scope: "add",
-          }),
+        const result = await postJSON("functions/handleCart.php", {
+          scope: "add",
+          prod_id: button.value,
+          prod_qty: qty,
         });
-
-        const responseText = await response.text(); // Get the response text
-        console.log(responseText); // Log the response text
-
-        // Try to parse the response as JSON
-        const result = JSON.parse(responseText);
-        console.log(result);
-
-        if (result.status == 201) {
-          alertify.success("Product added to cart");
-          // await updateCart();
-          // Show the off-canvas
-          const offcanvas = new bootstrap.Offcanvas(
-            document.querySelector("#offcanvasRight")
-          );
-          offcanvas.show(); // Show the off-canvas if not already visible
-        } else if (result.status == "alreadyexisting") {
-          alertify.success("Product already added in cart");
-        } else if (result.status == 401) {
-          alertify.success("Login to continue");
-        } else if (result.status == 500) {
-          alertify.error("Something went wrong");
+        if (isSuccess(result.status)) {
+          // Reload so the cart shows the new item, then open it.
+          window.location.hash = "cart";
+          window.location.reload();
+        } else if (result.status === "alreadyexisting") {
+          notify("message", "This product is already in your cart");
+        } else if (result.status === 401) {
+          notify("error", "Please log in to add items to your cart");
         } else {
-          alertify.error("Unexpected error");
+          notify("error", result.message || "Something went wrong");
         }
       } catch (error) {
         console.error(error);
-        alertify.error("Failed to add product to cart");
+        notify("error", "Failed to add product to cart");
       }
     });
   });
-});
-// buy.addEventListener("click", async (e) => {
-//   e.preventDefault();
 
-//   const productData = e.target.closest(".product_data");
-//   const prod_id = productData.querySelector(".add-to-bag-btn").value;
-//   const qty = productData.querySelector(".qty").value;
-
-//   try {
-//     const response = await fetch("functions/handleCart.php", {
-//       method: "POST",
-//       headers: {
-//         "Content-Type": "application/json",
-//       },
-//       body: JSON.stringify({
-//         prod_id: prod_id,
-//         prod_qty: qty,
-//         scope: "add",
-//       }),
-//     });
-
-//     const responseText = await response.text(); // Get the response text
-//     console.log(responseText); // Log the response text
-
-//     // Try to parse the response as JSON
-//     const result = JSON.parse(responseText);
-//     console.log(result);
-
-//     if (result.status == 201) {
-//       alertify.success("Product added to cart");
-//       document.querySelector(".container").addEventListener("load", (e) => {
-//         location.href += "#.container"; // Update the location directly
-//       });
-//     } else if (result.status == "alreadyexisting") {
-//       alertify.success("Product already added in cart");
-//     } else if (result.status == 401) {
-//       alertify.success("Login to continue");
-//     } else if (result.status == 500) {
-//       alertify.error("Something went wrong");
-//     } else {
-//       alertify.error("Unexpected error");
-//     }
-//   } catch (error) {
-//     console.error(error);
-//     alertify.error("Failed to add product to cart");
-//   }
-// });
-document.addEventListener("DOMContentLoaded", () => {
-  document.querySelectorAll(".updateQuantity").forEach((button) => {
-    button.addEventListener("click", async (e) => {
-      const productData = e.target.closest(".cartItem");
-      const prod_id = productData.getAttribute("id");
-      const qty = productData.querySelector(".cartQty").value;
-      try {
-        const response = await fetch("functions/handleCart.php", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            prod_id: prod_id,
-            prod_qty: qty,
-            scope: "update",
-          }),
-        });
-
-        const responseText = await response.text(); // Get the response text
-        console.log(responseText); // Log the response text
-
-        // Try to parse the response as JSON
-        const result = JSON.parse(responseText);
-        console.log(result);
-
-        if (result.status == 200) {
-        } else if (result.status == 500) {
-          alertify.error("Something went wrong");
-        } else {
-          alertify.error("Unexpected error");
-        }
-      } catch (error) {
-        console.error(error);
-        alertify.error("Failed to add product to cart");
-      }
-    });
-  });
-});
-
-wishList.addEventListener("click", async (e) => {
-  e.preventDefault();
-
-  const productData = e.target.closest(".product_data");
-  const prod_id = productData.querySelector(".wish").value;
-
-  try {
-    const response = await fetch("functions/wishList.php", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        prod_id: prod_id,
-        scope: "add",
-      }),
-    });
-
-    const responseText = await response.text(); // Get the response text
-    console.log(responseText); // Log the response text
-
-    // Try to parse the response as JSON
-    const result = JSON.parse(responseText);
-    console.log(result);
-
-    if (result.status == 201) {
-      alertify.success("Product added to wishList");
-    } else if (result.status == "alreadyexisting") {
-      alertify.success("Product already added in wishList");
-    } else if (result.status == 401) {
-      alertify.success("Login to continue");
-    } else if (result.status == 500) {
-      alertify.error("Something went wrong");
-    } else {
-      alertify.error("Unexpected error");
+  // Open the cart after "add to cart" reloaded the page.
+  const cartPanel = document.querySelector("#offcanvasRight");
+  if (window.location.hash === "#cart") {
+    history.replaceState(null, "", window.location.pathname + window.location.search);
+    if (cartPanel && window.bootstrap) {
+      bootstrap.Offcanvas.getOrCreateInstance(cartPanel).show();
+      notify("success", "Product added to cart");
     }
-  } catch (error) {
-    console.error("Error:", error);
-    alertify.error("Failed to add product to wishList");
   }
-});
-// removeItems.forEach((button) => {
-//   button.addEventListener("click", async (e) => {
-//     e.preventDefault();
-//     const cartId = e.target.value;
-//     try {
-//       const response = await fetch("functions/handleCart.php", {
-//         method: "POST",
-//         headers: {
-//           "Content-Type": "application/json",
-//         },
-//         body: JSON.stringify({
-//           cartId: cartId,
-//           scope: "delete",
-//         }),
-//       });
 
-//       const responseText = await response.text(); // Get the response text
-//       console.log(responseText); // Log the response text
-
-//       // Try to parse the response as JSON
-//       const result = JSON.parse(responseText);
-//       console.log(result);
-
-//       if (result.status == 201) {
-//         alertify.success("Product deleted from cart");
-//         cart.addEventListener("DOMContentLoaded", (e) => {
-//           location.href += "#myCart";
-//         });
-//       } else if (result.status == 500) {
-//         alertify.error("Something went wrong");
-//       } else {
-//         alertify.error("Unexpected error");
-//       }
-//     } catch (error) {
-//       console.error("Error:", error);
-//       alertify.error("Failed to add product to cart");
-//     }
-//   });
-// });
-document.addEventListener("DOMContentLoaded", function () {
+  // Remove from cart.
   document.querySelectorAll(".removeItem").forEach((button) => {
     button.addEventListener("click", async (e) => {
       e.preventDefault();
-
-      const cartId = e.target.value;
-
-      const cartItem = e.target.closest(".cartItem");
-      if (cartItem) {
-        cartItem.style.opacity = 0.5; // Indicate removal in progress
-      }
-
+      const cartItem = button.closest(".cartItem");
+      cartItem.style.opacity = 0.5;
       try {
-        const response = await fetch("functions/handleCart.php", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            cartId: cartId,
-            scope: "delete",
-          }),
-        });
-
-        const responseText = await response.text(); // Get the response text
-        console.log(responseText); // Log the response text
-
-        // Try to parse the response as JSON
-        const result = JSON.parse(responseText);
-        console.log(result);
-
-        if (result.status == 201) {
-          alertify.success("Product deleted from cart");
-          if (cartItem) {
-            cartItem.remove();
-          }
-        } else if (result.status == 500) {
-          alertify.error("Something went wrong");
-          if (cartItem) {
-            cartItem.style.opacity = 1; // Revert if error
-          }
+        const result = await postJSON("functions/handleCart.php", { scope: "delete", cartId: button.value });
+        if (isSuccess(result.status)) {
+          cartItem.remove();
+          recalcCart();
+          notify("success", "Product removed from cart");
         } else {
-          alertify.error("Unexpected error");
-          if (cartItem) {
-            cartItem.style.opacity = 1; // Revert if error
-          }
+          cartItem.style.opacity = 1;
+          notify("error", result.message || "Something went wrong");
         }
       } catch (error) {
-        console.error("Error:", error);
-        alertify.error("Failed to add product to cart");
-        if (cartItem) {
-          cartItem.style.opacity = 1; // Revert if error
+        console.error(error);
+        cartItem.style.opacity = 1;
+        notify("error", "Failed to remove product from cart");
+      }
+    });
+  });
+
+  // Add to wishlist (product page).
+  document.querySelectorAll(".wish").forEach((button) => {
+    button.addEventListener("click", async (e) => {
+      e.preventDefault();
+      try {
+        const result = await postJSON("functions/wishList.php", { scope: "add", prod_id: button.value });
+        if (isSuccess(result.status)) {
+          notify("success", "Product added to wishlist");
+        } else if (result.status === "alreadyexisting") {
+          notify("message", "Already in your wishlist");
+        } else if (result.status === 401) {
+          notify("error", "Please log in to use your wishlist");
+        } else {
+          notify("error", result.message || "Something went wrong");
         }
+      } catch (error) {
+        console.error(error);
+        notify("error", "Failed to add product to wishlist");
+      }
+    });
+  });
+
+  // Remove from wishlist (wishlist page).
+  document.querySelectorAll(".removeWishList").forEach((button) => {
+    button.addEventListener("click", async (e) => {
+      e.preventDefault();
+      const wishlistItem = button.closest(".wishlist-item");
+      wishlistItem.style.opacity = 0.5;
+      try {
+        const result = await postJSON("functions/wishList.php", { scope: "delete", wID: button.value });
+        if (isSuccess(result.status)) {
+          wishlistItem.remove();
+          notify("success", "Product removed from wishlist");
+          if (!document.querySelector(".wishlist-item")) {
+            document.querySelector("#wishEmpty")?.classList.remove("d-none");
+          }
+        } else {
+          wishlistItem.style.opacity = 1;
+          notify("error", result.message || "Something went wrong");
+        }
+      } catch (error) {
+        console.error(error);
+        wishlistItem.style.opacity = 1;
+        notify("error", "Failed to remove product from wishlist");
       }
     });
   });

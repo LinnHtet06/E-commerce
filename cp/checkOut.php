@@ -1,111 +1,84 @@
 <?php
-session_start();
-include('functions/userfunction.php');
-include('include/header.php');
-// include('functions/authCode.php');
+require_once __DIR__ . '/functions/userfunction.php';
+require_customer();
+
+$items = getCartItems();
+if (!$items) {
+    redirect('index.php', 'Your cart is empty');
+}
+$totalPrice = cartTotal($items);
+$customer = getCustomer() ?? [];
+$pageTitle = 'Checkout | Dior';
+include __DIR__ . '/include/header.php';
 ?>
 <div class="py-3">
-    <div class="container">
-        <h6 class="text-black">
-            <a class="text-black" href="index.php">
-            Home/
-            </a>
-            
-            <a class="text-black" href="checkOut.php">
-            CheckOut/
-            </a>
-        </h6>
-    </div>
+  <div class="container">
+    <h6 class="text-black">
+      <a class="text-black" href="index.php">Home</a> / Checkout
+    </h6>
+  </div>
 </div>
 <div class="py-5">
-    <div class="container product_data">
-        <div class="card">
-            <div class="card-body shadow">
-            <form action="functions/placeOrder.php" method="POST">
-            <div class="row">
-                <div class="col-md-7">
-                    <h5>Detail</h5><hr>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label  class="fw-bold">Name</label>
-                            <input type="text" required name="name" id="name" placeholder="Enter your full Name" class="form-control" id="">
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label  class="fw-bold">Email</label>
-                            <input type="email" required name="email" id="email" placeholder="Enter your email" class="form-control" id="">
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label  class="fw-bold">Phone</label>
-                            <input type="text" required  name="phone" id="phone" placeholder="Enter your Phone Number" class="form-control" id="">
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label  class="fw-bold">Postal Code (optional)</label>
-                            <input type="text" name="pincode" id="pincode" placeholder="Enter your pin code" class="form-control" id="">
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label  class="fw-bold">Address</label>
-                            <textarea required name="address" id="address" class="form-control"></textarea>
-                        </div>
-                    </div>
+  <div class="container">
+    <div class="card">
+      <div class="card-body shadow">
+        <form action="functions/placeOrder.php" method="POST">
+          <div class="row">
+            <div class="col-md-7">
+              <h5>Details</h5><hr>
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label for="name" class="fw-bold">Name</label>
+                  <input type="text" required name="name" id="name" value="<?= e($customer['c_name'] ?? '') ?>" placeholder="Enter your full name" class="form-control">
                 </div>
-                <div class="col-md-5">
-                    <h5>Cart Items</h5><hr>
-                    <div class="row align-items-center">
-                        <div class="col-md-5">
-                            <h6>Product</h6>
-                        </div>
-                        <div class="col-md-3">
-                            <h6>Price</h6>
-                        </div>
-                        <div class="col-md-2">
-                            <h6>Quantity</h6>
-                        </div>
-                    </div>
-                    <?php 
-                    $items=getCartItem();
-                    $totalPrice=0;
-                    foreach($items as $item)
-                    {
-                        ?>
-                        <div class="card product_data shadow-sm mb-3">
-                            <div class="row align-items-center">
-                                <div class="col-md-2">
-                                <img src="upload/<?=$item['p_image']?>" alt="<?=$item['p_name']?>" class="w-100">
-                                </div>
-                                <div class="col-md-3">
-                                    <h5><?= $item['p_name']?></h5>
-                                </div>
-                                <div class="col-md-3">
-                                    <h5>$<?= $item['p_price']?></h5>
-                                </div>
-                                <div class="col-md-3">
-                                    <h5><?= $item['pqty']?></h5>
-                                </div>
-                               
-                            </div>
-                        </div>
-                        <?php
-                        $totalPrice+=$item['p_price']*$item['pqty'] ;
-                    }
-                    ?>
-                    <hr>
-                    <h5>Total Price: <span class="float-end fw-bold">$<?= $totalPrice?></span></h5>
-                    <div>
-                        <input type="hidden" name="paymentMode" value="card">
-                        <button name="placeOrder-btn" type="submit" class="btn btn-dark w-100">
-                            Place Order $<?= $totalPrice?></button>
-                            <div id="paypal-button-container" class="mt-3"></div>
-                    </div>
+                <div class="col-md-6 mb-3">
+                  <label for="email" class="fw-bold">Email</label>
+                  <input type="email" required name="email" id="email" value="<?= e($customer['c_email'] ?? '') ?>" placeholder="Enter your email" class="form-control">
                 </div>
+                <div class="col-md-6 mb-3">
+                  <label for="phone" class="fw-bold">Phone</label>
+                  <input type="tel" required name="phone" id="phone" value="<?= e($customer['c_phone'] ?? '') ?>" placeholder="Enter your phone number" class="form-control">
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label for="pincode" class="fw-bold">Postal code (optional)</label>
+                  <input type="text" name="pincode" id="pincode" maxlength="20" placeholder="Enter your postal code" class="form-control">
+                </div>
+                <div class="col-md-12 mb-3">
+                  <label for="address" class="fw-bold">Address</label>
+                  <textarea required name="address" id="address" class="form-control" rows="3"><?= e($customer['c_address'] ?? '') ?></textarea>
+                </div>
+              </div>
             </div>
-            </form>
+            <div class="col-md-5">
+              <h5>Cart Items</h5><hr>
+              <div class="row align-items-center">
+                <div class="col-5"><h6>Product</h6></div>
+                <div class="col-4"><h6>Price</h6></div>
+                <div class="col-3"><h6>Qty</h6></div>
+              </div>
+              <?php foreach ($items as $item): ?>
+                <div class="card shadow-sm mb-3">
+                  <div class="row align-items-center g-2 p-2">
+                    <div class="col-2">
+                      <img src="upload/<?= e($item['p_image']) ?>" alt="<?= e($item['p_name']) ?>" class="w-100">
+                    </div>
+                    <div class="col-3"><h6 class="mb-0"><?= e($item['p_name']) ?></h6></div>
+                    <div class="col-4"><h6 class="mb-0">$<?= money($item['p_price']) ?></h6></div>
+                    <div class="col-3"><h6 class="mb-0"><?= (int) $item['pqty'] ?></h6></div>
+                  </div>
+                </div>
+              <?php endforeach; ?>
+              <hr>
+              <h5>Total Price: <span class="float-end fw-bold">$<?= money($totalPrice) ?></span></h5>
+              <p class="text-muted small">Payment is taken on delivery (this demo shop has no card payments).</p>
+              <button name="placeOrder-btn" type="submit" class="btn btn-dark w-100">
+                Place Order $<?= money($totalPrice) ?>
+              </button>
             </div>
-        </div>
+          </div>
+        </form>
+      </div>
     </div>
+  </div>
 </div>
-
-<?php
-include('include/footer.php');
-?>
- <!-- <script src="https://www.paypal.com/sdk/js?client-id=AWm8cErp2CpUE91SYJ9yuMAPSt7DaZGbQeM1x971DTfmJlFeZv3rmrmSpADwEA-HC1c6AzlJXpgfAMgP&components=buttons&enable-funding=card&disable-funding=paylater,venmo" data-sdk-integration-source="integrationbuilder_sc"></script> -->
- 
+<?php include __DIR__ . '/include/footer.php'; ?>

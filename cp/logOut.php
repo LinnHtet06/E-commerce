@@ -1,10 +1,5 @@
 <?php
-session_start();
-include('functions/myfunction.php');
-if(isset($_SESSION['auth']))
-{
-    unset($_SESSION['auth']);
-    unset($_SESSION['auth_user']);
-}
-redirect("index.php","Logged Out successful");
-?>
+require_once __DIR__ . '/functions/common.php';
+unset($_SESSION['auth'], $_SESSION['auth_user']);
+session_regenerate_id(true);
+redirect('index.php', 'Logged out successfully');
