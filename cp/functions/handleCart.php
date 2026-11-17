@@ -1,123 +1,84 @@
-
-    
-
-
 <?php
-session_start();
-include('../db/config.php');
+/*
+ * Cart actions called from asset/js/custom.js. Always answers with JSON:
+ * { "status": ..., "message": ... }
+ */
+require_once __DIR__ . '/common.php';
 
-// Enable error reporting
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-
-// Set content type to JSON
 header('Content-Type: application/json');
 
-$response = [];
-
-// Decode the JSON body
-$data = json_decode(file_get_contents('php://input'), true);
-
-if (isset($_SESSION['auth'])) {
-    if (isset($data['scope'])) {
-        $scope = $data['scope'];
-        switch ($scope) {
-            case "add":
-                if (isset($data['prod_id']) && isset($data['prod_qty'])) {
-                    $prod_id = $data['prod_id'];
-                    $prod_qty = $data['prod_qty'];
-                    $userID = $_SESSION['auth_user']['c_id'];
-
-                    $checkCart = "SELECT * FROM carts WHERE p_id='$prod_id' AND c_id='$userID'";
-                    $checkResult = mysqli_query($conn, $checkCart);
-
-                    if (mysqli_num_rows($checkResult) > 0) {
-                        $response['status'] = 'alreadyexisting';
-                    } else {
-                        $sql = "INSERT INTO carts (pqty, p_id, c_id) VALUES ('$prod_qty','$prod_id','$userID')";
-                        $result = mysqli_query($conn, $sql);
-
-                        if ($result) {
-                            $response['status'] = 201;
-                        } else {
-                            $response['status'] = 500;
-                            $response['message'] = 'Failed to add product to cart';
-                        }
-                    }
-                } else {
-                    $response['status'] = 400;
-                    $response['message'] = 'Product ID or quantity not set';
-                }
-                break;
-            case "update":
-                if (isset($data['prod_id']) && isset($data['prod_qty'])) {
-                    $prod_id = $data['prod_id'];
-                    $prod_qty = $data['prod_qty'];
-                    $userID = $_SESSION['auth_user']['c_id'];
-                    $checkCart = "SELECT * FROM carts WHERE p_id='$prod_id' AND c_id='$userID'";
-                    $checkResult = mysqli_query($conn, $checkCart);
-
-                    if (mysqli_num_rows($checkResult) > 0) {
-                        $updateQuery="UPDATE carts SET pqty='$prod_qty' WHERE p_id='$prod_id'";
-                        $queryRun=mysqli_query($conn,$updateQuery);
-                        if($queryRun){
-                            $response['status'] = 200;
-                        }
-                        else{
-                            $response['status'] = 500;
-                        }
-                    } else {
-                        echo "Something Went Wrong";
-                    }
-                } else {
-                    $response['status'] = 400;
-                    $response['message'] = 'Product ID or quantity not set';
-                }
-                break;
-
-
-            case "delete":
-                if (isset($data['cartId'])) {
-                    $cartId = $data['cartId'];
-                    $userID = $_SESSION['auth_user']['c_id'];
-
-                    $checkCart = "SELECT * FROM carts WHERE cart_id='$cartId' AND c_id='$userID'";
-                    $checkResult = mysqli_query($conn, $checkCart);
-
-                    if (mysqli_num_rows($checkResult) > 0) {
-                        $deletesql = "DELETE FROM carts WHERE cart_id='$cartId'";
-                        $result = mysqli_query($conn, $deletesql);
-                        if ($result) {
-                            $response['status'] = 201;
-                            $response['message'] = 'Successfully deleted product from cart';
-                        } else {
-                            $response['status'] = 500;
-                            $response['message'] = 'Failed to delete product from cart';
-                        }
-                    } else {
-                        $response['status'] = 404;
-                        $response['message'] = 'Cart item not found';
-                    }
-                } else {
-                    $response['status'] = 400;
-                    $response['message'] = 'Cart ID not set';
-                }
-                break;
-
-            default:
-                $response['status'] = 500;
-                $response['message'] = 'Invalid scope';
-                break;
-        }
-    } else {
-        $response['status'] = 400;
-        $response['message'] = 'Scope not set';
-    }
-} else {
-    $response['status'] = 401;
-    $response['message'] = 'Unauthorized';
+function respond($status, string $message = ''): void
+{
+    echo json_encode(['status' => $status, 'message' => $message]);
+    exit();
 }
 
-// Output the JSON response
-echo json_encode($response);
-?>
+if (!is_customer()) {
+    respond(401, 'Please log in to use the cart');
+}
+
+$data = json_decode(file_get_contents('php://input'), true);
+if (!is_array($data) || empty($data['scope'])) {
+    respond(400, 'Scope not set');
+}
+
+$userID = current_customer_id();
+
+try {
+    switch ($data['scope']) {
+        case 'add':
+            $prodId = positive_int($data['prod_id'] ?? null);
+            $qty    = positive_int($data['prod_qty'] ?? null);
+            if (!$prodId || !$qty) {
+                respond(400, 'Product or quantity missing');
+            }
+            $product = db_one('SELECT p_stock FROM product WHERE p_id = ?', [$prodId]);
+            if (!$product) {
+                respond(404, 'Product not found');
+            }
+            if (db_one('SELECT cart_id FROM carts WHERE p_id = ? AND c_id = ?', [$prodId, $userID])) {
+                respond('alreadyexisting', 'This product is already in your cart');
+            }
+            if ($qty > (int) $product['p_stock']) {
+                respond(409, $product['p_stock'] > 0 ? "Only {$product['p_stock']} left in stock" : 'Sorry, this product is out of stock');
+            }
+            db_query('INSERT INTO carts (pqty, p_id, c_id) VALUES (?, ?, ?)', [$qty, $prodId, $userID]);
+            respond(201, 'Product added to cart');
+
+        case 'update':
+            $cartId = positive_int($data['cartId'] ?? null);
+            $qty    = positive_int($data['prod_qty'] ?? null);
+            if (!$cartId || !$qty) {
+                respond(400, 'Cart item or quantity missing');
+            }
+            $item = db_one(
+                'SELECT p.p_stock FROM carts c JOIN product p ON p.p_id = c.p_id WHERE c.cart_id = ? AND c.c_id = ?',
+                [$cartId, $userID]
+            );
+            if (!$item) {
+                respond(404, 'Cart item not found');
+            }
+            if ($qty > (int) $item['p_stock']) {
+                respond(409, "Only {$item['p_stock']} left in stock");
+            }
+            db_query('UPDATE carts SET pqty = ? WHERE cart_id = ? AND c_id = ?', [$qty, $cartId, $userID]);
+            respond(200, 'Quantity updated');
+
+        case 'delete':
+            $cartId = positive_int($data['cartId'] ?? null);
+            if (!$cartId) {
+                respond(400, 'Cart ID not set');
+            }
+            if (!db_one('SELECT cart_id FROM carts WHERE cart_id = ? AND c_id = ?', [$cartId, $userID])) {
+                respond(404, 'Cart item not found');
+            }
+            db_query('DELETE FROM carts WHERE cart_id = ? AND c_id = ?', [$cartId, $userID]);
+            respond(201, 'Product removed from cart');
+
+        default:
+            respond(400, 'Invalid scope');
+    }
+} catch (Throwable $e) {
+    error_log('Cart error: ' . $e->getMessage());
+    respond(500, 'Something went wrong');
+}

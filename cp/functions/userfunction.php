@@ -1,131 +1,91 @@
-<?php 
-include('db/config.php');
+<?php
+/* Data functions for the customer-facing shop. */
+require_once __DIR__ . '/common.php';
 
-function redirect($url,$message)
+function getCollections(): array
 {
-    $_SESSION['message']=$message;
-    header('Location:'.$url);
-    exit();
-}
-function getAll($table)
-{
-    global $conn;
-    $query="SELECT * FROM $table";
-   return $result=mysqli_query($conn,$query);
-}
-function getId($table,$id)
-{
-    global $conn;
-    $query="SELECT * FROM $table WHERE p_id='$id'";
-   return $result=mysqli_query($conn,$query);
-}
-function getcolName($table,$name)
-{
-    global $conn;
-    $query="SELECT * FROM $table WHERE colName='$name' LIMIT 1";
-   return $result=mysqli_query($conn,$query);
-}
-function getproductName($table,$name)
-{
-    global $conn;
-    $query="SELECT * FROM $table WHERE p_name='$name' LIMIT 1";
-   return $result=mysqli_query($conn,$query);
-}
-function getProductByCollection($cid){
-    global $conn;
-    $query="SELECT * FROM product WHERE collectionID='$cid'";
-   return $result=mysqli_query($conn,$query);
-}
-function getCartItem()
-{
-    global $conn; 
-    $cusID=$_SESSION['auth_user']['c_id'];
-    $sql="SELECT c.cart_id as cID,c.pqty,c.p_id,p.p_id as pID,p.p_name,p.p_size,p.p_image,p.p_price
-    FROM carts c, product p WHERE c.p_id=p.p_id AND c.c_id='$cusID' ORDER BY c.cart_id DESC";
-    return $result=mysqli_query($conn,$sql);
+    return db_all('SELECT * FROM collection ORDER BY collectionID');
 }
 
-
-function getWishItem()
+function getCollectionByName(string $name): ?array
 {
-    global $conn;
-    $cusID=$_SESSION['auth_user']['c_id'];
-    $sql="SELECT w.wish_id as wID,w.p_id,p.p_id as pID,p.p_name,p.p_size,p.p_image,p.p_price
-    FROM wishList w,product p WHERE w.p_id=p.p_id AND w.c_id='$cusID' ORDER BY w.wish_id DESC";
-    return $result=mysqli_query($conn,$sql);
-}
-function getOrderItems()
-{
-    global $conn;
-    $cusID=$_SESSION['auth_user']['c_id'];
-    $sql="SELECT * FROM `Order` WHERE c_id='$cusID' ORDER BY o_id DESC";
-   return $result=mysqli_query($conn,$sql);
-}
-function checkTrackingNo($trackingNumber)
-{
-    global $conn;
-    $cusID=$_SESSION['auth_user']['c_id'];
-    $sql="SELECT * FROM `Order` WHERE tracking_no='$trackingNumber' AND c_id='$cusID'";
-    return $result=mysqli_query($conn,$sql);
-}
-function getAllCol($table)
-{
-    global $conn;
-    $query="SELECT * FROM $table";
-    return $result=mysqli_query($conn,$query);
+    return db_one('SELECT * FROM collection WHERE colName = ? LIMIT 1', [$name]);
 }
 
-function getColId($table,$id)
+function getProductsByCollection(int $collectionId): array
 {
-    global $conn;
-    $query="SELECT * FROM $table WHERE collectionID='$id'";
-   return $result=mysqli_query($conn,$query);
+    return db_all('SELECT * FROM product WHERE collectionID = ? ORDER BY p_id', [$collectionId]);
 }
 
-if(isset($_POST['submit']))
+function getProductById(int $productId): ?array
 {
-    $name=mysqli_real_escape_string($conn,$_POST['name']);
-    $mail=mysqli_real_escape_string($conn,$_POST['mail']);
-    $phone=mysqli_real_escape_string($conn,$_POST['phone']);
-    $address=mysqli_real_escape_string($conn,$_POST['address']);
-    $pass=mysqli_real_escape_string($conn,$_POST['pass']);
-    $cpass=mysqli_real_escape_string($conn,$_POST['cpass']);
+    return db_one(
+        'SELECT p.*, c.colName FROM product p JOIN collection c ON c.collectionID = p.collectionID WHERE p.p_id = ?',
+        [$productId]
+    );
+}
 
-    $checkemail="SELECT c_email FROM customer WHERE c_email='$mail' ";
-    $checkemailQuery=mysqli_query($conn,$checkemail);
-    if($pass==$cpass)
-    {
-        $sql="INSERT INTO customer (c_name,c_email,c_phone,c_address,c_password) VALUES 
-        ('$name','$mail','$phone','$address','$pass')";
-        $query=mysqli_query($conn,$sql);
-        if($query)
-        {
-            redirect('loginUi.php',"Registered Successfully");
-        }
-        else
-        {
-            redirect('register.php',"something went worng");
-        }
+function getProductByName(string $name): ?array
+{
+    return db_one(
+        'SELECT p.*, c.colName FROM product p JOIN collection c ON c.collectionID = p.collectionID WHERE p.p_name = ? LIMIT 1',
+        [$name]
+    );
+}
+
+/** Items in the logged-in customer's cart (empty for guests). */
+function getCartItems(): array
+{
+    if (!is_customer()) {
+        return [];
     }
-    else
-    {
-        redirect('register.php',"Password does not match");
-    }
-
+    return db_all(
+        'SELECT c.cart_id AS cID, c.pqty, p.p_id, p.p_name, p.p_size, p.p_image, p.p_price, p.p_stock
+         FROM carts c JOIN product p ON p.p_id = c.p_id
+         WHERE c.c_id = ? ORDER BY c.cart_id DESC',
+        [current_customer_id()]
+    );
 }
-if(isset($_POST['product_btn']))
+
+function cartTotal(array $items): float
 {
-    $productID=mysqli_real_escape_string($conn,$_POST['collectionID']);
-    $sql="SELECT p.*, c.colName FROM product p JOIN collection c ON p.collectionID = c.collectionID WHERE p.collectionID = '$productID'";
-    $res=mysqli_query($conn,$sql);
-    $data=mysqli_fetch_array($res);
-    if($data){
-
-        redirect('christianDior.php',"Category deleted successfully");
+    $total = 0.0;
+    foreach ($items as $item) {
+        $total += $item['p_price'] * $item['pqty'];
     }
-    else
-    {
-        redirect('index.php',"Something Went wrong");
-    }
+    return $total;
 }
-?>
+
+function getWishItems(): array
+{
+    return db_all(
+        'SELECT w.wish_id AS wID, p.p_id, p.p_name, p.p_size, p.p_image, p.p_price
+         FROM wishlist w JOIN product p ON p.p_id = w.p_id
+         WHERE w.c_id = ? ORDER BY w.wish_id DESC',
+        [current_customer_id()]
+    );
+}
+
+function getCustomer(): ?array
+{
+    return db_one('SELECT c_name, c_email, c_phone, c_address FROM customer WHERE c_id = ?', [current_customer_id()]);
+}
+
+function getMyOrders(): array
+{
+    return db_all('SELECT * FROM orders WHERE c_id = ? ORDER BY o_id DESC', [current_customer_id()]);
+}
+
+/** One of the logged-in customer's orders, looked up by tracking number. */
+function getMyOrder(string $trackingNumber): ?array
+{
+    return db_one('SELECT * FROM orders WHERE tracking_no = ? AND c_id = ?', [$trackingNumber, current_customer_id()]);
+}
+
+function getOrderLines(int $orderId): array
+{
+    return db_all(
+        'SELECT oi.*, p.p_image FROM order_items oi LEFT JOIN product p ON p.p_id = oi.p_id WHERE oi.o_id = ?',
+        [$orderId]
+    );
+}

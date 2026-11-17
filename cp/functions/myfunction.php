@@ -1,90 +1,64 @@
 <?php
-include('../db/config.php');
-function redirect($url,$message)
+/* Data functions for the admin panel. */
+require_once __DIR__ . '/common.php';
+
+function getAllProducts(): array
 {
-    $_SESSION['message']=$message;
-    header('Location:'.$url);
-    exit();
-}
-function getAll($table)
-{
-    global $conn;
-    $query="SELECT * FROM $table";
-   return $result=mysqli_query($conn,$query);
-}
-function getId($table,$id)
-{
-    global $conn;
-    $query="SELECT * FROM $table WHERE p_id='$id'";
-   return $result=mysqli_query($conn,$query);
+    return db_all(
+        'SELECT p.*, c.colName FROM product p JOIN collection c ON c.collectionID = p.collectionID ORDER BY p.p_id'
+    );
 }
 
-function getAllCol($table)
+function getAllCollections(): array
 {
-    global $conn;
-    $query="SELECT * FROM $table";
-    return $result=mysqli_query($conn,$query);
+    return db_all('SELECT * FROM collection ORDER BY collectionID');
 }
 
-function getColId($table,$id)
+function getProduct(int $id): ?array
 {
-    global $conn;
-    $query="SELECT * FROM $table WHERE collectionID='$id'";
-   return $result=mysqli_query($conn,$query);
+    return db_one('SELECT * FROM product WHERE p_id = ?', [$id]);
 }
-function getAllOrderItems()
-{
-    global $conn;
-    $sql="SELECT * FROM `Order` WHERE status='0'";
-    return $result=mysqli_query($conn,$sql);
-}
-function checkTrackingNo($trackingNumber)
-{
-    global $conn;
-    $cusID=$_SESSION['auth_user']['c_id'];
-    $sql="SELECT * FROM `Order` WHERE tracking_no='$trackingNumber' ";
-    return $result=mysqli_query($conn,$sql);
-}
-function getOrderHistory()
-{
-    global $conn;
-    $sql="SELECT * FROM `Order` WHERE status !='0'";
-    return $result=mysqli_query($conn,$sql);
-}
-if(isset($_POST['Adminsubmit']))
-{
-    $name=mysqli_real_escape_string($conn,$_POST['name']);
-    $mail=mysqli_real_escape_string($conn,$_POST['mail']);
-    $gender=mysqli_real_escape_string($conn,$_POST['gender']);
-    $pass=mysqli_real_escape_string($conn,$_POST['pass']);
-    $cpass=mysqli_real_escape_string($conn,$_POST['cpass']);
 
-    if($pass==$cpass)
-    {
-    $checkemail="SELECT a_email FROM admin WHERE a_email='$mail' ";
-    $checkemailQuery=mysqli_query($conn,$checkemail);
-    if (mysqli_num_rows($checkemailQuery) > 0) {
-        redirect('adminRegister.php', "Email already exists");
-    } 
-    else{
-        $hashedPass = md5($pass);
-        $sql="INSERT INTO admin (a_name,a_email,a_gender,a_password) VALUES 
-        ('$name','$mail','$gender','$hashedPass')";
-        $query=mysqli_query($conn,$sql);
-        if($query)
-        {
-            redirect('../admin/adminlogin.php',"Registered Successfully");
-        }
-        else
-        {
-            redirect('adminRegister.php',"something went worng");
-        }
-    }
-    }
-    else
-    {
-        redirect('adminRegister.php',"Password does not match");
-    }
-
+function getCollection(int $id): ?array
+{
+    return db_one('SELECT * FROM collection WHERE collectionID = ?', [$id]);
 }
-?>
+
+/** Orders that still need handling (status 0 = Under Process). */
+function getPendingOrders(): array
+{
+    return db_all('SELECT * FROM orders WHERE status = 0 ORDER BY o_id DESC');
+}
+
+/** Completed and cancelled orders. */
+function getOrderHistory(): array
+{
+    return db_all('SELECT * FROM orders WHERE status <> 0 ORDER BY o_id DESC');
+}
+
+function getOrderByTracking(string $trackingNumber): ?array
+{
+    return db_one('SELECT * FROM orders WHERE tracking_no = ?', [$trackingNumber]);
+}
+
+function getOrderLines(int $orderId): array
+{
+    return db_all(
+        'SELECT oi.*, p.p_image FROM order_items oi LEFT JOIN product p ON p.p_id = oi.p_id WHERE oi.o_id = ?',
+        [$orderId]
+    );
+}
+
+function getDashboardStats(): array
+{
+    return [
+        'products'    => (int) db_value('SELECT COUNT(*) FROM product'),
+        'collections' => (int) db_value('SELECT COUNT(*) FROM collection'),
+        'customers'   => (int) db_value('SELECT COUNT(*) FROM customer'),
+        'pending'     => (int) db_value('SELECT COUNT(*) FROM orders WHERE status = 0'),
+        'orders'      => (int) db_value('SELECT COUNT(*) FROM orders'),
+        'revenue'     => (float) db_value('SELECT COALESCE(SUM(o_totalAmount), 0) FROM orders WHERE status <> 2'),
+        'lowStock'    => db_all('SELECT p_id, p_name, p_stock FROM product WHERE p_stock <= 5 ORDER BY p_stock, p_name'),
+        'recent'      => db_all('SELECT * FROM orders ORDER BY o_id DESC LIMIT 5'),
+    ];
+}
